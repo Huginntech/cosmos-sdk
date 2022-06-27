@@ -17,7 +17,7 @@ func init() {
 
 var PKs = simtestutil.CreateTestPubKeys(500)
 
-// intended to be used with require/assert:  suite.Require().True(ValEq(...))
+// intended to be used with require/assert: require.True(ValEq(...))
 func ValEq(t *testing.T, exp, got types.Validator) (*testing.T, bool, string, types.Validator, types.Validator) {
 	return t, exp.MinEqual(&got), "expected:\n%v\ngot:\n%v", exp, got
 }

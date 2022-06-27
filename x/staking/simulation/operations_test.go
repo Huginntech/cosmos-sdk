@@ -1,6 +1,7 @@
 package simulation_test
 
 import (
+	"math/big"
 	"math/rand"
 	"testing"
 	"time"
@@ -51,6 +52,10 @@ type SimTestSuite struct {
 }
 
 func (suite *SimTestSuite) SetupTest() {
+	suite.T().Parallel()
+
+	sdk.DefaultPowerReduction = sdk.NewIntFromBigInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil))
+
 	app, err := simtestutil.Setup(
 		testutil.AppConfig,
 		&suite.codec,
@@ -61,27 +66,26 @@ func (suite *SimTestSuite) SetupTest() {
 		&suite.mintKeeper,
 		&suite.distrKeeper,
 	)
-
 	suite.Require().NoError(err)
+
 	suite.app = app
 	suite.ctx = app.BaseApp.NewContext(false, tmproto.Header{})
 
-	s := rand.NewSource(1)
+	s := rand.NewSource(100)
 	suite.r = rand.New(s)
 	suite.accs = simtypes.RandomAccounts(suite.r, 4)
 
-	ctx := app.BaseApp.NewContext(false, tmproto.Header{})
-	initAmt := suite.stakingKeeper.TokensFromConsensusPower(ctx, 200)
-	initCoins := sdk.NewCoins(sdk.NewCoin(sdk.DefaultBondDenom, initAmt))
+	suite.mintKeeper.SetParams(suite.ctx, minttypes.DefaultParams())
+	suite.mintKeeper.SetMinter(suite.ctx, minttypes.DefaultInitialMinter())
 
-	suite.mintKeeper.SetParams(ctx, minttypes.DefaultParams())
-	suite.mintKeeper.SetMinter(ctx, minttypes.DefaultInitialMinter())
+	initAmt := suite.stakingKeeper.TokensFromConsensusPower(suite.ctx, 200)
+	initCoins := sdk.NewCoins(sdk.NewCoin(sdk.DefaultBondDenom, initAmt))
 
 	// add coins to the accounts
 	for _, account := range suite.accs {
-		acc := suite.accountKeeper.NewAccountWithAddress(ctx, account.Address)
-		suite.accountKeeper.SetAccount(ctx, acc)
-		suite.Require().NoError(banktestutil.FundAccount(suite.bankKeeper, ctx, account.Address, initCoins))
+		acc := suite.accountKeeper.NewAccountWithAddress(suite.ctx, account.Address)
+		suite.accountKeeper.SetAccount(suite.ctx, acc)
+		suite.Require().NoError(banktestutil.FundAccount(suite.bankKeeper, suite.ctx, account.Address, initCoins))
 	}
 }
 
@@ -145,13 +149,13 @@ func (suite *SimTestSuite) TestSimulateMsgCreateValidator() {
 	types.ModuleCdc.UnmarshalJSON(operationMsg.Msg, &msg)
 
 	suite.Require().True(operationMsg.OK)
-	suite.Require().Equal("0.080000000000000000", msg.Commission.MaxChangeRate.String())
-	suite.Require().Equal("0.080000000000000000", msg.Commission.MaxRate.String())
-	suite.Require().Equal("0.019527679037870745", msg.Commission.Rate.String())
+	suite.Require().Equal("0.910000000000000000", msg.Commission.MaxChangeRate.String())
+	suite.Require().Equal("0.910000000000000000", msg.Commission.MaxRate.String())
+	suite.Require().Equal("0.481079303822955765", msg.Commission.Rate.String())
 	suite.Require().Equal(types.TypeMsgCreateValidator, msg.Type())
-	suite.Require().Equal([]byte{0xa, 0x20, 0x51, 0xde, 0xbd, 0xe8, 0xfa, 0xdf, 0x4e, 0xfc, 0x33, 0xa5, 0x16, 0x94, 0xf6, 0xee, 0xd3, 0x69, 0x7a, 0x7a, 0x1c, 0x2d, 0x50, 0xb6, 0x2, 0xf7, 0x16, 0x4e, 0x66, 0x9f, 0xff, 0x38, 0x91, 0x9b}, msg.Pubkey.Value)
-	suite.Require().Equal("cosmos1ghekyjucln7y67ntx7cf27m9dpuxxemn4c8g4r", msg.DelegatorAddress)
-	suite.Require().Equal("cosmosvaloper1ghekyjucln7y67ntx7cf27m9dpuxxemnsvnaes", msg.ValidatorAddress)
+	suite.Require().Equal([]byte{0xa, 0x20, 0xfe, 0x16, 0xda, 0xac, 0x46, 0x9, 0xd7, 0x12, 0x2c, 0x93, 0x31, 0xe1, 0x5b, 0x32, 0xde, 0x31, 0x59, 0xc4, 0x43, 0xc3, 0x9, 0x4b, 0x2e, 0xa4, 0xa6, 0x2d, 0xca, 0x76, 0x38, 0xc7, 0x51, 0x9c}, msg.Pubkey.Value)
+	suite.Require().Equal("cosmos1pjdrdhzq6hea7jl9t6nsdp35v2sgg899d66xvh", msg.DelegatorAddress)
+	suite.Require().Equal("cosmosvaloper1pjdrdhzq6hea7jl9t6nsdp35v2sgg899gwwnqy", msg.ValidatorAddress)
 	suite.Require().Len(futureOperations, 0)
 }
 
@@ -223,13 +227,13 @@ func (suite *SimTestSuite) TestSimulateMsgEditValidator() {
 	types.ModuleCdc.UnmarshalJSON(operationMsg.Msg, &msg)
 
 	suite.Require().True(operationMsg.OK)
-	suite.Require().Equal("0.280623462081924936", msg.CommissionRate.String())
-	suite.Require().Equal("xKGLwQvuyN", msg.Description.Moniker)
-	suite.Require().Equal("SlcxgdXhhu", msg.Description.Identity)
-	suite.Require().Equal("WeLrQKjLxz", msg.Description.Website)
-	suite.Require().Equal("rBqDOTtGTO", msg.Description.SecurityContact)
+	suite.Require().Equal("1.000000000000000000", msg.CommissionRate.String())
+	suite.Require().Equal("zhXBSyWnLq", msg.Description.Moniker)
+	suite.Require().Equal("AYwLJYQzRs", msg.Description.Identity)
+	suite.Require().Equal("yfMcIWVPhu", msg.Description.Website)
+	suite.Require().Equal("PaVidkRnZv", msg.Description.SecurityContact)
 	suite.Require().Equal(types.TypeMsgEditValidator, msg.Type())
-	suite.Require().Equal("cosmosvaloper1tnh2q55v8wyygtt9srz5safamzdengsn9dsd7z", msg.ValidatorAddress)
+	suite.Require().Equal("cosmosvaloper16rr9ks0vjjfq758g9mqlye7zntq378xg9j7lrd", msg.ValidatorAddress)
 	suite.Require().Len(futureOperations, 0)
 }
 
@@ -250,11 +254,11 @@ func (suite *SimTestSuite) TestSimulateMsgDelegate() {
 	types.ModuleCdc.UnmarshalJSON(operationMsg.Msg, &msg)
 
 	suite.Require().True(operationMsg.OK)
-	suite.Require().Equal("cosmos1ghekyjucln7y67ntx7cf27m9dpuxxemn4c8g4r", msg.DelegatorAddress)
-	suite.Require().Equal("98100858108421259236", msg.Amount.Amount.String())
+	suite.Require().Equal("cosmos1pjdrdhzq6hea7jl9t6nsdp35v2sgg899d66xvh", msg.DelegatorAddress)
+	suite.Require().Equal("182870851461110560141", msg.Amount.Amount.String())
 	suite.Require().Equal("stake", msg.Amount.Denom)
 	suite.Require().Equal(types.TypeMsgDelegate, msg.Type())
-	suite.Require().Equal("cosmosvaloper1msauaqegzvluk6wsypnrlckkr70r57aga6ldyh", msg.ValidatorAddress)
+	suite.Require().Equal("cosmosvaloper1kfe9j73l43x6vjdl0zdx77j2azxdd8t5z2tt20", msg.ValidatorAddress)
 	suite.Require().Len(futureOperations, 0)
 }
 
